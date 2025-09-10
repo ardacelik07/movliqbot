@@ -1,0 +1,19 @@
+{
+  "name": "movliqbot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node script.js",
+    "bot": "node script.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@microsoft/signalr": "^8.0.7",
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5"
+  }
+}
