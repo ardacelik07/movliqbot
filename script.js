@@ -207,7 +207,7 @@ async function getActiveRooms(accessToken) {
           name: room.roomName,
           createdAt: room.createdAt,
           startTime: room.startTime,
-          maxParticipants: room.maxParticipants || 3
+          maxParticipants: room.maxParticipants || 6
         };
       }
     });
@@ -329,8 +329,8 @@ function hasUserJoinedRoom(email, roomId) {
   return userJoinedRooms[email] && userJoinedRooms[email].includes(roomId);
 }
 
-// Belirli bir oda için rasgele kullanıcıları seç (oda başına max 3 kullanıcı)
-function selectUsersForRoom(roomId, count = 3) {
+// Belirli bir oda için rasgele kullanıcıları seç (oda başına max 6 kullanıcı)
+function selectUsersForRoom(roomId, count = 6) {
   // Bu odaya daha önce katılmamış kullanıcıları filtrele
   const availableUsers = activeUsers.filter(user => {
     return !hasUserJoinedRoom(user.email, roomId);
@@ -386,14 +386,8 @@ async function checkAndJoinRooms() {
   // Şu anki zamanı al
   const now = new Date();
   
-  // Son 72 saatte oluşturulan ve createdAt üzerinden 1 dakika geçmiş odaları bul
+  // Tüm aktif odaları kontrol et (72 saat kuralı kaldırıldı)
   for (const room of activeRooms) {
-    // Son 72 saatte oluşturulmuş odaları filtrele
-    if (!isAfterCutoffDate(room.createdAt)) {
-      console.log(`Oda ${room.id}: "${room.roomName}" - 72 saatten önce oluşturulmuş, atlanıyor.`);
-      continue; // Bu odayı atla
-    }
-    
     const createdAt = new Date(room.createdAt);
     const minutesSinceCreation = getMinutesBetweenDates(createdAt, now);
     
@@ -403,12 +397,21 @@ async function checkAndJoinRooms() {
     if (minutesSinceCreation >= 1) {
       console.log(`Oda ${room.id} oluşturulalı 1 dakikadan fazla oldu, katılım sağlanıyor...`);
       
-      // Bu oda için 3 kullanıcı seç
-      const selectedUsers = selectUsersForRoom(room.id, 3);
+      // Bu oda için 6 kullanıcı seç
+      const selectedUsers = selectUsersForRoom(room.id, 6);
       
-      // Seçilen kullanıcıları aralarında bekleme yaparak odaya kat
-      for (const user of selectedUsers) {
+      // Seçilen kullanıcıları aralarında 5 saniye bekleme ile odaya kat
+      for (let i = 0; i < selectedUsers.length; i++) {
+        const user = selectedUsers[i];
+        console.log(`${user.email} kullanıcısı ${room.id} ID'li odaya katılmaya çalışıyor... (${i + 1}/${selectedUsers.length})`);
+        
         await joinRoom(user.accessToken, room.id, user.email);
+        
+        // Her kullanıcı arasında 5 saniye bekleme (son kullanıcı dahil)
+        if (i < selectedUsers.length) {
+          console.log(`⏳ 5 saniye bekleniyor...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
       }
     } else {
       console.log(`Oda ${room.id} henüz yeni oluşturulmuş, bekleniyor...`);
@@ -459,7 +462,7 @@ function startTokenRefreshProcess() {
 // Belirli aralıklarla odaları kontrol edip katılma işlemi
 function startRoomCheckProcess() {
   // Her 30 saniyede bir kontrol
-  const CHECK_INTERVAL = 30 * 1000; // 30 saniye
+  const CHECK_INTERVAL = 50 * 1000; // 30 saniye
   
   console.log("Oda kontrol sistemi başlatılıyor...");
   
@@ -539,9 +542,7 @@ async function loginSequentially() {
       
       console.log('Bot çalışmaya devam ediyor...');
       
-      // Kesme tarihini log'la
-      const cutoffDate = getCutoffDate();
-      console.log(`Sadece ${cutoffDate.toISOString()} tarihinden sonraki odalar dikkate alınacak.`);
+      // 72 saat kuralı kaldırıldı
       console.log(`Aynı odaya yapılan istekler arasında ${JOIN_REQUEST_DELAY/1000} saniye beklenecek.`);
     } else {
       console.error('Hiçbir kullanıcı login olamadı!');

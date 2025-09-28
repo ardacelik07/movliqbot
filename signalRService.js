@@ -221,31 +221,31 @@ class SignalRService {
                     console.log(`Konum güncelleniyor - Oda: ${roomId}, Mesafe: ${stats.totalDistance.toFixed(2)}m, Adım: ${stats.totalSteps}, Kalori: ${stats.totalCalories}`);
                     console.log(`Bu güncelleme: +${adjustedDistance.toFixed(3)}m (${adjustedDistance * 1000} metre), +${stepsForDistance} adım, +${calories} kalori`);
                     
-                    // UpdateLocation metodu çağrısı (roomId, distance, steps, calories parametreleriyle)
-                    await this.connection.invoke('UpdateLocation', roomId, stats.totalDistance, stats.totalSteps, stats.totalCalories);
+                    // Pace hesapla (dakika/km) - mesafe 0'dan büyükse hesapla, değilse 0
+                    const pace = stats.totalDistance > 0 ? (stats.totalSteps / stats.totalDistance) / 1000 : 0;
                     
-                    console.log(`Konum güncelleme isteği gönderildi.`);
+                    // UpdateLocation metodu çağrısı - 5 parametre ile
+                    await this.connection.invoke('UpdateLocation', roomId, stats.totalDistance, stats.totalSteps, stats.totalCalories, pace);
+                    
+                    console.log(`✅ Konum güncelleme isteği başarıyla gönderildi! (Pace: ${pace.toFixed(2)})`);
                     
                     // Her 30 saniyede bir hile kontrolünü simüle et
                     if (stats.timeChunks >= 1) {
-                        // Bu durumda 30 saniyede toplam mesafe değişkenlik gösterecek
                         const avgDistancePerUpdate = (possibleDistances[0] + possibleDistances[1] + possibleDistances[2]) / 3;
-                        const chunkDistance = avgDistancePerUpdate * 6; // 5 saniyelik 6 güncelleme
-                        const actualSteps = Math.floor(stepsForDistance * 6); // Ortalama adım sayısı
+                        const chunkDistance = avgDistancePerUpdate * 6;
+                        const actualSteps = Math.floor(stepsForDistance * 6);
                         
                         console.log(`30 saniyelik kontrol - Ortalama Mesafe: ${chunkDistance.toFixed(3)}m, Atılan adım: ${actualSteps}`);
-                        
-                        // Kontrol sonrası sayacı sıfırla
                         stats.timeChunks = 0;
                     }
                     
                 } catch (error) {
-                    console.error(`Konum güncellenirken hata oluştu:`, error);
+                    console.error(`❌ Konum güncellenirken hata oluştu:`, error);
                     console.error(`Hata detayı:`, error.message);
                     
-                    // Hata devam ederse intervali temizle
-                    if (error.message && error.message.includes('connection')) {
-                        console.error(`Bağlantı hatası nedeniyle konum güncellemeleri durduruluyor.`);
+                    // Bağlantı hatası durumunda intervali temizle
+                    if (error.message && (error.message.includes('connection') || error.message.includes('Connection'))) {
+                        console.error(`❌ Bağlantı hatası nedeniyle konum güncellemeleri durduruluyor.`);
                         this.stopLocationUpdates(roomId);
                     }
                 }
@@ -291,30 +291,31 @@ class SignalRService {
             
             const stats = this.userStats[roomId];
             
-            // Rastgele değerler seçelim (0.01, 0.02 veya 0.03)
-            const possibleDistances = [0.01, 0.02, 0.03]; // Backend'de 10, 20, 30 metre
-            const possibleSteps = [11, 27, 36]; // Mesafelere karşılık gelen adım sayıları
+            // Rastgele değerler seçelim
+            const possibleDistances = [0.01, 0.02, 0.03];
+            const possibleSteps = [11, 27, 36];
             
-            // Rastgele bir indeks seçelim
             const randomIndex = Math.floor(Math.random() * possibleDistances.length);
-            
-            // Mesafe ve adım sayısını bu indekse göre belirleyelim
             const distance = possibleDistances[randomIndex];
             const steps = possibleSteps[randomIndex];
-            
             const calories = Math.floor(steps * 0.05);
             
             stats.totalDistance += distance;
             stats.totalSteps += steps;
             stats.totalCalories += calories;
             
-            console.log(`Manuel konum güncelleniyor - Oda: ${roomId}, Toplam Mesafe: ${stats.totalDistance.toFixed(3)}m, Toplam Adım: ${stats.totalSteps}, Toplam Kalori: ${stats.totalCalories}`);
-            console.log(`Bu güncelleme: +${distance.toFixed(3)}m (${distance * 1000} metre), +${steps} adım, +${calories} kalori`);
-            await this.connection.invoke('UpdateLocation', roomId, stats.totalDistance, stats.totalSteps, stats.totalCalories);
-            console.log('Manuel konum güncelleme başarılı!');
+            // Pace hesapla
+            const pace = stats.totalDistance > 0 ? (stats.totalSteps / stats.totalDistance) / 1000 : 0;
+            
+            console.log(`Manuel konum güncelleniyor - Oda: ${roomId}, Toplam Mesafe: ${stats.totalDistance.toFixed(3)}m, Toplam Adım: ${stats.totalSteps}, Toplam Kalori: ${stats.totalCalories}, Pace: ${pace.toFixed(2)}`);
+            console.log(`Bu güncelleme: +${distance.toFixed(3)}m, +${steps} adım, +${calories} kalori`);
+            
+            // 5 parametre ile çağır
+            await this.connection.invoke('UpdateLocation', roomId, stats.totalDistance, stats.totalSteps, stats.totalCalories, pace);
+            console.log('✅ Manuel konum güncelleme başarılı!');
             return true;
         } catch (error) {
-            console.error('Manuel konum güncellenirken hata oluştu:', error);
+            console.error('❌ Manuel konum güncellenirken hata oluştu:', error);
             return false;
         }
     }
