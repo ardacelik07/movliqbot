@@ -462,7 +462,7 @@ function startTokenRefreshProcess() {
 // Belirli aralıklarla odaları kontrol edip katılma işlemi
 function startRoomCheckProcess() {
   // Her 30 saniyede bir kontrol
-  const CHECK_INTERVAL = 50 * 1000; // 30 saniye
+  const CHECK_INTERVAL = 30 * 1000; // 30 saniye
   
   console.log("Oda kontrol sistemi başlatılıyor...");
   
