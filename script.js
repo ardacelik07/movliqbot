@@ -493,9 +493,7 @@ async function checkAndJoinRooms() {
     const createdAt = new Date(room.createdAt);
     const minutesSinceCreation = getsBetweenDates(createdAt, now);
 
-    console.log(
-      `Oda ${room.id}: "${room.roomName}" - Oluşturulma üzerinden geçen süre: ${sSinceCreation} dakika`,
-    );
+    
 
     // Eğer oda oluşturulalı 1 dakikadan fazla olduysa katıl
     if (minutesSinceCreation >= 0) {
